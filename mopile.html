@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Payment - Vending Machine</title>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBzKF_fuEKbSP-8JuBZb9QkuMj9eGcBsYw",
+            authDomain: "advanced-vending-machine.firebaseapp.com",
+            databaseURL: "https://advanced-vending-machine-default-rtdb.firebaseio.com",
+            projectId: "advanced-vending-machine",
+            storageBucket: "advanced-vending-machine.firebasestorage.app",
+            messagingSenderId: "119768375164",
+            appId: "1:119768375164:web:d96d14021f495869474ef9",
+            measurementId: "G-9935V0NKQ1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        window.firebaseDB = database;
+        window.firebaseRef = ref;
+        window.firebaseSet = set;
+        window.firebaseUpdate = update;
+        window.firebaseOnValue = onValue;
+        window.firebaseInitialized = true;
+    </script>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
+            width: 100%;
+            min-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .mobile-container {
+            width: 100%;
+            max-width: 480px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100%;
+            padding: 20px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mobile-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes rotate {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .mobile-header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .mobile-title {
+            font-size: 28px;
+            font-weight: 900;
+            color: #ffffff;
+            margin: 0 0 10px 0;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.9;
+                transform: scale(1.02);
+            }
+        }
+
+        .machine-id {
+            font-size: 14px;
+            color: #a5b4fc;
+            font-weight: 700;
+        }
+
+        .content-area {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%);
+            border-radius: 20px;
+            padding: 25px;
+            border: 2px solid rgba(99, 102, 241, 0.2);
+            box-shadow: inset 0 0 50px rgba(99, 102, 241, 0.2);
+            position: relative;
+            z-index: 1;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .product-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            border-color: #6366f1;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+
+        .product-card.selected {
+            border-color: #22c55e;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%);
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
+        }
+
+        .product-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .product-name {
+            font-size: 16px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+
+        .product-price {
+            font-size: 20px;
+            font-weight: 900;
+            color: #22c55e;
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+
+        .selected-product-info {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+            border: 3px solid #6366f1;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #a5b4fc;
+            font-weight: 700;
+        }
+
+        .info-value {
+            font-weight: 900;
+            font-size: 18px;
+            text-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+        }
+
+        .payment-section {
+            margin-top: 25px;
+        }
+
+        .payment-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .payment-option {
+            padding: 15px 10px;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .payment-option:hover {
+            border-color: #6366f1;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .payment-option.selected {
+            border-color: #22c55e;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+
+        .payment-divider {
+            text-align: center;
+            color: #a5b4fc;
+            font-weight: 700;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .payment-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-weight: 700;
+            background: rgba(15, 23, 42, 0.8);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .payment-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: 900;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.6);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            box-shadow: 0 10px 30px rgba(34, 197, 94, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(34, 197, 94, 0.6);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+            color: white;
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.5);
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(245, 158, 11, 0.6);
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 800;
+            margin-top: 15px;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        .status-success {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.2) 100%);
+            border: 2px solid #22c55e;
+            color: #22c55e;
+        }
+
+        .status-error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+            border: 2px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .status-info {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.2) 100%);
+            border: 2px solid #3b82f6;
+            color: #3b82f6;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffffff;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .current-state {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+            border: 2px solid #6366f1;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .state-label {
+            font-size: 12px;
+            color: #a5b4fc;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .state-value {
+            font-size: 18px;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+
+        .timeout-section {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+            border: 3px solid #ef4444;
+            border-radius: 20px;
+            padding: 25px;
+            margin-top: 20px;
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 15px 35px rgba(239, 68, 68, 0.3);
+            animation: fadeInUp 0.5s ease-out;
+            text-align: center;
+        }
+
+        .timeout-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .timeout-title {
+            font-size: 20px;
+            font-weight: 900;
+            color: #ef4444;
+            margin-bottom: 10px;
+        }
+
+        .timeout-message {
+            font-size: 16px;
+            color: #ffffff;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+    </style>
+    <style>
+        @view-transition {
+            navigation: auto;
+        }
+    </style>
+    <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+    <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+</head>
+
+<body>
+    <div class="mobile-container">
+        <header class="mobile-header">
+            <h1 class="mobile-title">📱 Mobile Payment</h1>
+            <div class="machine-id" id="machineIdDisplay">
+                Machine: Loading...
+            </div>
+        </header>
+        <div class="current-state">
+            <div class="state-label">
+                Current State
+            </div>
+            <div class="state-value" id="currentStateDisplay">
+                IDLE
+            </div>
+        </div>
+        
+        <!-- Step 1: Product Selection -->
+        <div class="content-area" id="productSelectionArea">
+            <h2 class="section-title">🛒 اختر المنتج</h2>
+            <div class="products-grid" id="productsGrid"></div>
+            <div id="productTimerInfo" style="text-align: center; margin-top: 15px; color: #fbbf24;">
+                ⏰ الوقت المتبقي: <span id="productTimerValue">120</span> ثانية
+            </div>
+        </div>
+        
+        <!-- Step 2: Payment -->
+        <div class="content-area hidden" id="paymentArea">
+            <h2 class="section-title">💳 الدفع</h2>
+            <div class="selected-product-info" id="selectedProductInfo"></div>
+            <div class="payment-section">
+                <div class="payment-options" id="paymentOptions"></div>
+                <div class="payment-divider">
+                    أو أدخل مبلغ مخصص
+                </div>
+                <input type="number" class="payment-input" id="customPaymentInput" placeholder="أدخل المبلغ (₪)"
+                    min="0" step="0.01">
+                <button class="btn btn-success" id="confirmPaymentBtn">
+                    ✅ تأكيد الدفع
+                </button>
+                <button class="btn btn-warning" id="cancelBtn">
+                    ❌ إلغاء
+                </button>
+            </div>
+            <div id="paymentTimerInfo" style="text-align: center; margin-top: 15px; color: #fbbf24;">
+                ⏰ الوقت المتبقي: <span id="paymentTimerValue">60</span> ثانية
+            </div>
+            <div id="statusMessage"></div>
+        </div>
+        
+        <!-- Step 3: Transaction Complete -->
+        <div class="content-area hidden" id="completeArea">
+            <h2 class="section-title">✅ تمت العملية بنجاح</h2>
+            <div class="selected-product-info" id="completeInfo"></div>
+            <div class="status-message status-success">
+                📦 اذهب لاستلام طلبك من الماكينة!
+            </div>
+            <div id="completeTimerInfo" style="text-align: center; margin-top: 15px; color: #fbbf24;">
+                ⏰ العودة التلقائية خلال: <span id="completeTimerValue">60</span> ثانية
+            </div>
+            <button class="btn btn-primary" id="newTransactionBtn" style="margin-top: 20px;">
+                🔄 عملية جديدة
+            </button>
+        </div>
+        
+        <!-- Step 4: Timeout Error -->
+        <div class="content-area hidden" id="timeoutArea">
+            <h2 class="section-title">⏰ انتهى الوقت</h2>
+            <div class="timeout-section">
+                <div class="timeout-icon">⏰</div>
+                <div class="timeout-title">انتهى الوقت المخصص</div>
+                <div class="timeout-message" id="timeoutMessage">
+                    لقد تجاوزت الوقت المحدد للعملية.
+                    يجب إعادة العملية من البداية.
+                </div>
+                <button class="btn btn-warning" id="restartBtn">
+                    🔄 إعادة العملية من البداية
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // ============================================================================
+        // MOBILE PAYMENT APP WITH TIMEOUT HANDLING
+        // ============================================================================
+
+        const PRODUCTS = [
+            { id: 'P001', name: 'كوكاكولا', icon: '🥤', price: 5.00 },
+            { id: 'P002', name: 'شيبس', icon: '🍟', price: 3.50 },
+            { id: 'P003', name: 'شوكولاتة', icon: '🍫', price: 4.00 },
+            { id: 'P004', name: 'ماء', icon: '💧', price: 2.00 },
+            { id: 'P005', name: 'عصير', icon: '🧃', price: 6.00 },
+            { id: 'P006', name: 'بسكويت', icon: '🍪', price: 3.00 }
+        ];
+
+        const PAYMENT_AMOUNTS = [1, 5, 10, 20, 50, 100];
+
+        class MobilePaymentApp {
+            constructor() {
+                this.machineId = this.getMachineIdFromURL();
+                this.selectedProduct = null;
+                this.selectedAmount = null;
+                this.currentState = 'IDLE';
+                
+                // Timers
+                this.timers = {
+                    productTimer: null,
+                    paymentTimer: null,
+                    completeTimer: null
+                };
+                
+                // Timeout state
+                this.timeoutReason = '';
+                
+                this.initializeElements();
+                this.waitForFirebase();
+                
+                document.getElementById('machineIdDisplay').textContent = `Machine: ${this.machineId}`;
+            }
+
+            getMachineIdFromURL() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('machine') || 'VM-001';
+            }
+
+            initializeElements() {
+                this.productSelectionArea = document.getElementById('productSelectionArea');
+                this.paymentArea = document.getElementById('paymentArea');
+                this.completeArea = document.getElementById('completeArea');
+                this.timeoutArea = document.getElementById('timeoutArea');
+                this.productsGrid = document.getElementById('productsGrid');
+                this.paymentOptions = document.getElementById('paymentOptions');
+                this.customPaymentInput = document.getElementById('customPaymentInput');
+                this.confirmPaymentBtn = document.getElementById('confirmPaymentBtn');
+                this.cancelBtn = document.getElementById('cancelBtn');
+                this.newTransactionBtn = document.getElementById('newTransactionBtn');
+                this.restartBtn = document.getElementById('restartBtn');
+                this.statusMessage = document.getElementById('statusMessage');
+                this.currentStateDisplay = document.getElementById('currentStateDisplay');
+                this.timeoutMessage = document.getElementById('timeoutMessage');
+                
+                // Timer displays
+                this.productTimerValue = document.getElementById('productTimerValue');
+                this.paymentTimerValue = document.getElementById('paymentTimerValue');
+                this.completeTimerValue = document.getElementById('completeTimerValue');
+            }
+
+            waitForFirebase() {
+                if (window.firebaseInitialized && window.firebaseDB) {
+                    console.log('[MOBILE] Firebase initialized');
+                    this.loadProducts();
+                    this.setupEventListeners();
+                    this.listenToMachineState();
+                    this.startProductSelectionTimer(120); // 2 minutes for product selection
+                } else {
+                    setTimeout(() => this.waitForFirebase(), 100);
+                }
+            }
+
+            loadProducts() {
+                this.productsGrid.innerHTML = '';
+                PRODUCTS.forEach(product => {
+                    const productCard = document.createElement('div');
+                    productCard.className = 'product-card';
+                    productCard.innerHTML = `
+                        <div class="product-icon">${product.icon}</div>
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-price">${product.price.toFixed(2)} ₪</div>
+                    `;
+                    productCard.addEventListener('click', () => this.selectProduct(product, productCard));
+                    this.productsGrid.appendChild(productCard);
+                });
+            }
+
+            setupEventListeners() {
+                this.confirmPaymentBtn.addEventListener('click', () => this.confirmPayment());
+                this.cancelBtn.addEventListener('click', () => this.cancelTransaction());
+                this.newTransactionBtn.addEventListener('click', () => this.startNewTransaction());
+                this.restartBtn.addEventListener('click', () => this.restartAfterTimeout());
+
+                this.customPaymentInput.addEventListener('input', () => {
+                    this.selectedAmount = null;
+                    document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('selected'));
+                });
+            }
+
+            // Timer Methods
+            startProductSelectionTimer(seconds = 120) {
+                this.clearAllTimers();
+                
+                let timeLeft = seconds;
+                this.productTimerValue.textContent = timeLeft;
+                
+                this.timers.productTimer = setInterval(() => {
+                    this.productTimerValue.textContent = timeLeft;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(this.timers.productTimer);
+                        this.handleTimeout('انتهى وقت اختيار المنتج (2 دقيقة). يجب إعادة المسح من البداية.');
+                    }
+                    timeLeft--;
+                }, 1000);
+            }
+
+            startPaymentTimer(seconds = 60) {
+                this.clearAllTimers();
+                
+                let timeLeft = seconds;
+                this.paymentTimerValue.textContent = timeLeft;
+                
+                this.timers.paymentTimer = setInterval(() => {
+                    this.paymentTimerValue.textContent = timeLeft;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(this.timers.paymentTimer);
+                        this.handleTimeout('انتهى وقت الدفع (1 دقيقة). يجب إعادة العملية من البداية.');
+                    }
+                    timeLeft--;
+                }, 1000);
+            }
+
+            startCompleteTimer(seconds = 60) {
+                this.clearAllTimers();
+                
+                let timeLeft = seconds;
+                this.completeTimerValue.textContent = timeLeft;
+                
+                this.timers.completeTimer = setInterval(() => {
+                    this.completeTimerValue.textContent = timeLeft;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(this.timers.completeTimer);
+                        this.handleTimeout('انتهى وقت الاستلام (1 دقيقة). تمت العودة إلى الشاشة الرئيسية.');
+                    }
+                    timeLeft--;
+                }, 1000);
+            }
+
+            clearAllTimers() {
+                Object.values(this.timers).forEach(timer => {
+                    if (timer) clearInterval(timer);
+                });
+            }
+
+            handleTimeout(reason) {
+                console.log('[MOBILE] Timeout occurred:', reason);
+                this.timeoutReason = reason;
+                
+                // Update machine state to IDLE
+                this.updateMachineState('IDLE', {
+                    timeoutReason: reason,
+                    timeoutAt: Date.now()
+                });
+                
+                // Show timeout screen
+                this.showTimeoutScreen(reason);
+            }
+
+            showTimeoutScreen(reason) {
+                // Hide all other areas
+                this.productSelectionArea.classList.add('hidden');
+                this.paymentArea.classList.add('hidden');
+                this.completeArea.classList.add('hidden');
+                
+                // Show timeout area
+                this.timeoutArea.classList.remove('hidden');
+                
+                // Update timeout message
+                this.timeoutMessage.textContent = `
+                    ${reason}
+                    الرجاء إعادة العملية من البداية عن طريق مسح رمز QR مرة أخرى.
+                `;
+            }
+
+            async restartAfterTimeout() {
+                // Reset everything
+                this.selectedProduct = null;
+                this.selectedAmount = null;
+                this.timeoutReason = '';
+                
+                // Hide timeout area
+                this.timeoutArea.classList.add('hidden');
+                
+                // Show product selection with timer
+                this.productSelectionArea.classList.remove('hidden');
+                this.startProductSelectionTimer(120);
+                
+                // Clear all selections
+                document.querySelectorAll('.product-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                // Reset machine state
+                await this.updateMachineState('IDLE', {
+                    restartedAfterTimeout: true,
+                    restartedAt: Date.now()
+                });
+            }
+
+            async selectProduct(product, cardElement) {
+                // Clear product selection timer
+                this.clearAllTimers();
+                
+                this.selectedProduct = product;
+
+                document.querySelectorAll('.product-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                cardElement.classList.add('selected');
+
+                await this.updateMachineState('PRODUCT_SELECTED', {
+                    productId: product.id,
+                    productName: product.name,
+                    productIcon: product.icon,
+                    productPrice: product.price
+                });
+
+                this.showPaymentArea();
+            }
+
+            showPaymentArea() {
+                this.productSelectionArea.classList.add('hidden');
+                this.paymentArea.classList.remove('hidden');
+                this.completeArea.classList.add('hidden');
+                this.timeoutArea.classList.add('hidden');
+
+                document.getElementById('selectedProductInfo').innerHTML = `
+                    <div class="info-row">
+                        <span class="info-label">المنتج:</span>
+                        <span class="info-value">${this.selectedProduct.icon} ${this.selectedProduct.name}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">السعر:</span>
+                        <span class="info-value">${this.selectedProduct.price.toFixed(2)} ₪</span>
+                    </div>
+                `;
+
+                this.loadPaymentOptions();
+                this.customPaymentInput.value = '';
+                this.selectedAmount = null;
+                this.statusMessage.innerHTML = '';
+                
+                // Start payment timer (1 minute)
+                this.startPaymentTimer(60);
+            }
+
+            loadPaymentOptions() {
+                this.paymentOptions.innerHTML = '';
+
+                PAYMENT_AMOUNTS.forEach(amount => {
+                    const option = document.createElement('div');
+                    option.className = 'payment-option';
+                    option.textContent = `${amount} ₪`;
+                    option.addEventListener('click', () => this.selectPaymentAmount(amount, option));
+                    this.paymentOptions.appendChild(option);
+                });
+            }
+
+            selectPaymentAmount(amount, optionElement) {
+                this.selectedAmount = amount;
+                this.customPaymentInput.value = '';
+
+                document.querySelectorAll('.payment-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                optionElement.classList.add('selected');
+            }
+
+            async confirmPayment() {
+                let amountPaid = this.selectedAmount || parseFloat(this.customPaymentInput.value);
+
+                if (!amountPaid || amountPaid <= 0) {
+                    this.showStatus('error', '❌ الرجاء اختيار أو إدخال مبلغ صحيح');
+                    return;
+                }
+
+                if (amountPaid < this.selectedProduct.price) {
+                    this.showStatus('error', `❌ المبلغ غير كافي! السعر: ${this.selectedProduct.price.toFixed(2)} ₪`);
+                    return;
+                }
+
+                this.confirmPaymentBtn.disabled = true;
+                this.confirmPaymentBtn.innerHTML = '⏳ جاري المعالجة... <span class="loading"></span>';
+
+                const change = amountPaid - this.selectedProduct.price;
+
+                // Clear payment timer
+                this.clearAllTimers();
+
+                await this.updateMachineState('WAITING_PAYMENT', {
+                    amountPaid: amountPaid,
+                    change: change
+                });
+
+                setTimeout(async () => {
+                    await this.updateMachineState('PAYMENT_CONFIRMED', {
+                        amountPaid: amountPaid,
+                        change: change
+                    });
+
+                    setTimeout(async () => {
+                        await this.updateMachineState('DISPENSING', {
+                            amountPaid: amountPaid,
+                            change: change
+                        });
+
+                        setTimeout(async () => {
+                            if (change > 0) {
+                                await this.updateMachineState('RETURNING_CHANGE', {
+                                    amountPaid: amountPaid,
+                                    change: change
+                                });
+
+                                setTimeout(async () => {
+                                    await this.updateMachineState('COMPLETE', {
+                                        amountPaid: amountPaid,
+                                        change: change
+                                    });
+                                    this.showCompleteArea(amountPaid, change);
+                                }, 2000);
+                            } else {
+                                await this.updateMachineState('COMPLETE', {
+                                    amountPaid: amountPaid,
+                                    change: 0
+                                });
+                                this.showCompleteArea(amountPaid, 0);
+                            }
+                        }, 2000);
+                    }, 1500);
+                }, 1000);
+            }
+
+            showCompleteArea(amountPaid, change) {
+                this.paymentArea.classList.add('hidden');
+                this.completeArea.classList.remove('hidden');
+                this.timeoutArea.classList.add('hidden');
+
+                document.getElementById('completeInfo').innerHTML = `
+                    <div class="info-row">
+                        <span class="info-label">المنتج:</span>
+                        <span class="info-value">${this.selectedProduct.icon} ${this.selectedProduct.name}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">السعر:</span>
+                        <span class="info-value">${this.selectedProduct.price.toFixed(2)} ₪</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">المدفوع:</span>
+                        <span class="info-value" style="color: #22c55e;">${amountPaid.toFixed(2)} ₪</span>
+                    </div>
+                    ${change > 0 ? `
+                    <div class="info-row">
+                        <span class="info-label">الباقي:</span>
+                        <span class="info-value" style="color: #fbbf24;">${change.toFixed(2)} ₪</span>
+                    </div>
+                    ` : ''}
+                `;
+                
+                // Start complete timer (1 minute)
+                this.startCompleteTimer(60);
+            }
+
+            async cancelTransaction() {
+                this.clearAllTimers();
+                await this.updateMachineState('IDLE', {
+                    cancelledAt: Date.now(),
+                    cancelledBy: 'user'
+                });
+                this.startNewTransaction();
+            }
+
+            async startNewTransaction() {
+                this.clearAllTimers();
+                await this.updateMachineState('IDLE', {});
+
+                this.selectedProduct = null;
+                this.selectedAmount = null;
+                this.productSelectionArea.classList.remove('hidden');
+                this.paymentArea.classList.add('hidden');
+                this.completeArea.classList.add('hidden');
+                this.timeoutArea.classList.add('hidden');
+
+                this.confirmPaymentBtn.disabled = false;
+                this.confirmPaymentBtn.innerHTML = '✅ تأكيد الدفع';
+
+                document.querySelectorAll('.product-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                // Start product selection timer
+                this.startProductSelectionTimer(120);
+            }
+
+            showStatus(type, message) {
+                this.statusMessage.className = `status-message status-${type}`;
+                this.statusMessage.textContent = message;
+            }
+
+            async updateMachineState(state, additionalData = {}) {
+                if (!window.firebaseDB) {
+                    console.error('[MOBILE] Firebase not initialized');
+                    return;
+                }
+
+                const sessionData = {
+                    state: state,
+                    timestamp: Date.now(),
+                    ...additionalData
+                };
+
+                if (this.selectedProduct) {
+                    sessionData.productId = this.selectedProduct.id;
+                    sessionData.productName = this.selectedProduct.name;
+                    sessionData.productIcon = this.selectedProduct.icon;
+                    sessionData.productPrice = this.selectedProduct.price;
+                }
+
+                const sessionRef = window.firebaseRef(window.firebaseDB, `machines/${this.machineId}/session`);
+                await window.firebaseSet(sessionRef, sessionData);
+
+                console.log(`[MOBILE] Updated state to: ${state}`, sessionData);
+            }
+
+            listenToMachineState() {
+                const sessionRef = window.firebaseRef(window.firebaseDB, `machines/${this.machineId}/session`);
+
+                window.firebaseOnValue(sessionRef, (snapshot) => {
+                    const session = snapshot.val();
+
+                    if (!session || !session.state) {
+                        this.currentState = 'IDLE';
+                        this.currentStateDisplay.textContent = 'IDLE';
+                        return;
+                    }
+
+                    this.currentState = session.state;
+                    this.currentStateDisplay.textContent = session.state;
+
+                    console.log('[MOBILE] Machine state:', session.state);
+                    
+                    // Check for timeout from machine side
+                    if (session.state === 'IDLE' && session.timeoutReason) {
+                        // Machine has timed out, show timeout screen
+                        this.handleTimeout(session.timeoutReason);
+                    }
+                });
+            }
+        }
+
+        window.addEventListener('load', () => {
+            new MobilePaymentApp();
+            console.log('[MOBILE] Mobile Payment App Initialized with Timeout Handling');
+        });
+    </script>
+    <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'9a970bbe57905daa',t:'MTc2NDk3NDQzMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
+</body>
+
+</html>
