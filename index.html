@@ -5,9 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Vending Machine - State Pattern Implementation</title>
-    <!-- QR Code Library -->
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getDatabase, ref, set, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
@@ -573,18 +572,10 @@
     </div>
 
     <script>
-        // ============================================================================
-        // VENDING MACHINE - STATE PATTERN IMPLEMENTATION (THEORY OF COMPUTATION)
-        // ============================================================================
-
+        
         const MACHINE_ID = 'VM-001';
 
-        /**
-         * ============================================
-         * EVENT BUS (Event-Driven Architecture)
-         * ============================================
-         * Implements Observer Pattern for decoupled communication
-         */
+        
         class EventBus {
             constructor() {
                 this.listeners = new Map();
@@ -622,12 +613,7 @@
             }
         }
 
-        /**
-         * ============================================
-         * STATE ABSTRACT CLASS (State Design Pattern)
-         * ============================================
-         * Base class for all concrete state implementations
-         */
+       
         class VendingMachineState {
             constructor(context) {
                 this.context = context;
@@ -664,12 +650,7 @@
             }
         }
 
-        /**
-         * ============================================
-         * CONCRETE STATE CLASSES (State Design Pattern)
-         * ============================================
-         * Each state has its own class with specific behavior
-         */
+        
 
         class IdleState extends VendingMachineState {
             onEnter() {
@@ -1106,12 +1087,7 @@
             }
         }
 
-        /**
-         * ============================================
-         * VENDING MACHINE MODEL (Model-View Separation)
-         * ============================================
-         * Pure business logic, no UI concerns
-         */
+        
         class VendingMachineModel {
             constructor() {
                 this.eventBus = new EventBus();
@@ -1258,12 +1234,7 @@
             }
         }
 
-        /**
-         * ============================================
-         * VENDING MACHINE VIEW (Model-View Separation)
-         * ============================================
-         * Only handles UI rendering, no business logic
-         */
+        
         class VendingMachineView {
             constructor(model) {
                 this.model = model;
@@ -1356,33 +1327,6 @@
             }
         }
 
-        /**
-         * ============================================
-         * FINITE AUTOMATON DOCUMENTATION
-         * ============================================
-         * Formal definition as per Theory of Computation requirements
-         * 
-         * Finite Automaton M = (Q, Σ, δ, q0, F)
-         * 
-         * Q = {IdleState, ProductSelectedState, WaitingPaymentState,
-         *      PaymentConfirmedState, DispensingState, 
-         *      ReturningChangeState, CompleteState}
-         * 
-         * Σ = {PRODUCT_SELECTED, PAYMENT_STARTED, PAYMENT_CONFIRMED,
-         *      CANCEL, RESET, TIMEOUT}
-         * 
-         * δ: Transition function (implemented in handleEvent() methods)
-         * 
-         * q0 = IdleState (initial state)
-         * 
-         * F = {CompleteState} (accepting/final state)
-         * 
-         * Language L = Sequence of valid transactions:
-         * L = {PRODUCT_SELECTED → PAYMENT_STARTED → PAYMENT_CONFIRMED
-         *      → [RETURNING_CHANGE] → COMPLETE}
-         */
-
-        // Initialize the application
         window.addEventListener('load', () => {
             console.log('[APP] Initializing Vending Machine with State Pattern...');
 
@@ -1399,3 +1343,4 @@
 </body>
 
 </html>
+
