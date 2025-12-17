@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mobile Payment - Vending Machine</title>
-    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getDatabase, ref, set, onValue, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
@@ -535,7 +534,6 @@
             <div id="statusMessage"></div>
         </div>
         
-        <!-- Step 3: Transaction Complete -->
         <div class="content-area hidden" id="completeArea">
             <h2 class="section-title">✅ تمت العملية بنجاح</h2>
             <div class="selected-product-info" id="completeInfo"></div>
@@ -550,7 +548,6 @@
             </button>
         </div>
         
-        <!-- Step 4: Timeout Error -->
         <div class="content-area hidden" id="timeoutArea">
             <h2 class="section-title">⏰ انتهى الوقت</h2>
             <div class="timeout-section">
@@ -567,10 +564,8 @@
         </div>
     </div>
     <script>
-        // ============================================================================
-        // MOBILE PAYMENT APP WITH TIMEOUT HANDLING
-        // ============================================================================
 
+        
         const PRODUCTS = [
             { id: 'P001', name: 'كوكاكولا', icon: '🥤', price: 5.00 },
             { id: 'P002', name: 'شيبس', icon: '🍟', price: 3.50 },
@@ -589,14 +584,12 @@
                 this.selectedAmount = null;
                 this.currentState = 'IDLE';
                 
-                // Timers
                 this.timers = {
                     productTimer: null,
                     paymentTimer: null,
                     completeTimer: null
                 };
                 
-                // Timeout state
                 this.timeoutReason = '';
                 
                 this.initializeElements();
@@ -671,7 +664,6 @@
                 });
             }
 
-            // Timer Methods
             startProductSelectionTimer(seconds = 120) {
                 this.clearAllTimers();
                 
@@ -733,26 +725,21 @@
                 console.log('[MOBILE] Timeout occurred:', reason);
                 this.timeoutReason = reason;
                 
-                // Update machine state to IDLE
                 this.updateMachineState('IDLE', {
                     timeoutReason: reason,
                     timeoutAt: Date.now()
                 });
                 
-                // Show timeout screen
                 this.showTimeoutScreen(reason);
             }
 
             showTimeoutScreen(reason) {
-                // Hide all other areas
                 this.productSelectionArea.classList.add('hidden');
                 this.paymentArea.classList.add('hidden');
                 this.completeArea.classList.add('hidden');
                 
-                // Show timeout area
                 this.timeoutArea.classList.remove('hidden');
                 
-                // Update timeout message
                 this.timeoutMessage.textContent = `
                     ${reason}
                     الرجاء إعادة العملية من البداية عن طريق مسح رمز QR مرة أخرى.
@@ -765,19 +752,15 @@
                 this.selectedAmount = null;
                 this.timeoutReason = '';
                 
-                // Hide timeout area
                 this.timeoutArea.classList.add('hidden');
                 
-                // Show product selection with timer
                 this.productSelectionArea.classList.remove('hidden');
                 this.startProductSelectionTimer(120);
                 
-                // Clear all selections
                 document.querySelectorAll('.product-card').forEach(card => {
                     card.classList.remove('selected');
                 });
                 
-                // Reset machine state
                 await this.updateMachineState('IDLE', {
                     restartedAfterTimeout: true,
                     restartedAt: Date.now()
@@ -785,7 +768,6 @@
             }
 
             async selectProduct(product, cardElement) {
-                // Clear product selection timer
                 this.clearAllTimers();
                 
                 this.selectedProduct = product;
@@ -974,7 +956,6 @@
                     card.classList.remove('selected');
                 });
                 
-                // Start product selection timer
                 this.startProductSelectionTimer(120);
             }
 
@@ -1025,9 +1006,7 @@
 
                     console.log('[MOBILE] Machine state:', session.state);
                     
-                    // Check for timeout from machine side
                     if (session.state === 'IDLE' && session.timeoutReason) {
-                        // Machine has timed out, show timeout screen
                         this.handleTimeout(session.timeoutReason);
                     }
                 });
@@ -1043,3 +1022,4 @@
 </body>
 
 </html>
+
